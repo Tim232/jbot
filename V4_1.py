@@ -1,21 +1,14 @@
-from pymongo import MongoClient
-import aiohttp, discord, asyncio, pymongo, random, threading, time, ast, bs4, openpyxl, re, os, urllib, datetime, json, requests, ctx, sys, platform, psutil, math, io, calendar, hgtk, psycopg2
-from PIL import Image
-from itertools import cycle
-from urllib.request import urlopen, Request
+import aiohttp
+import asyncio
+import datetime
+import discord
+import hgtk
+import os
+import random
+import requests
+import time
 from bs4 import BeautifulSoup
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
-from shutil import copyfile
-from json import loads
 from captcha.image import ImageCaptcha
-
-# 초성 리스트. 00 ~ 18
-CHOSUNG_LIST = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
-# 중성 리스트. 00 ~ 20
-JUNGSUNG_LIST = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
-# 종성 리스트. 00 ~ 27 + 1(1개 없음)
-JONGSUNG_LIST = [' ', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
 
 logchannel = 762179726927986718
 errorchannel = 762179910004506634
@@ -31,21 +24,22 @@ ban = []
 
 start_time = time.time()
 intents = discord.Intents.default()
-intents.typing = False
 intents.presences = True
 intents.members = True
 
 client = discord.Client(intents=intents)
 
+
 def log_info(channel, user, message):  # 건유님의 코드에서 뜯어옴(?)
     Ftime = time.strftime('%Y-%m-%d %p %I:%M:%S', time.localtime(time.time()))
     print("log info : [시간: " + str(Ftime) + ",채널: " + str(channel) + ",유저: " + str(user) + "]: " + str(message))
+
 
 async def get_text_from_url(url):
     async with aiohttp.ClientSession() as sess:
         async with sess.get(url, headers={'user-agent': 'Mozilla/5.0'}) as res:
             text = await res.text()
-    text = BeautifulSoup(text, 'html.parser').text
+    return BeautifulSoup(text, 'html.parser').text
 
 
 @client.event
@@ -55,12 +49,13 @@ async def on_ready():
     log_info("Local", "Local", id)
     await client.get_channel(readylog).send("준홍봇 전원 on")
     dagi = 8
-    messages = ['준홍아 도움을 입력해 명령어 확인', f'{len(client.guilds)}개의 서버에 참여중', f'{len(client.users)}명의 유저들과 소통하는중', '안녕하세요', '문의는 junhong123a@naver.com 또는 준홍!good good#8922', '개인메세지는 `준홍아 갠챗`', '사용자 여러분 감사합니다!',f'이 메세지는 {dagi}초마다 바뀝니다.']
+    messages = ['준홍아 도움을 입력해 명령어 확인', f'{len(client.guilds)}개의 서버에 참여중', f'{len(client.users)}명의 유저들과 소통하는중', '안녕하세요',
+                '문의는 junhong123a@naver.com 또는 준홍!good good#8922', '개인메세지는 `준홍아 갠챗`', '사용자 여러분 감사합니다!',
+                f'이 메세지는 {dagi}초마다 바뀝니다.']
     while True:
         await client.change_presence(status=discord.Status.online, activity=discord.Game(name=messages[0]))
         messages.append(messages.pop(0))
         await asyncio.sleep(dagi)
-
 
 
 @client.event
@@ -73,15 +68,21 @@ async def on_message(message):
         if message.content.startswith('준홍아'):
             log_info(message.channel, message.author, message.content)
             embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-            embed.add_field(name="준홍봇 로그",value=f'guild : {message.channel.guild}({message.guild.id})\nch = {message.channel.name}({message.channel.id})\nauthor = {message.author}({message.author.id})\ncontent = {message.content}', inline=True)
+            embed.add_field(name="준홍봇 로그",
+                            value=f'guild : {message.channel.guild}({message.guild.id})\nch = {message.channel.name}({message.channel.id})\nauthor = {message.author}({message.author.id})\ncontent = {message.content}',
+                            inline=True)
             embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
             await client.get_channel(int(logchannel)).send(embed=embed)
 
             if message.content == "준홍아 안녕":
                 embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
                 await message.channel.send(f"<@{message.author.id}> 님 환영합니다!")
-                embed.add_field(name="준홍봇 채팅기능", value="안녕하세요 준홍봇입니다. 준홍봇의 개발자는 준홍!good good#8922입니다.! 자세한 명령어는 `준홍아 도움 `을! \n그리고 왠만하면 봇DM에서 명령어는 사용안해주셨으면 합니다.",inline=True)
-                embed.add_field(name="안내사항",value="준홍봇의 개발자 준홍은 봇 도우미로 활동하고 있습니다. 도움이 필요하신분은 준홍!good good#8922로 DM  주시기바랍니다.", inline=True)
+                embed.add_field(name="준홍봇 채팅기능",
+                                value="안녕하세요 준홍봇입니다. 준홍봇의 개발자는 준홍!good good#8922입니다.! 자세한 명령어는 `준홍아 도움 `을! \n그리고 왠만하면 봇DM에서 명령어는 사용안해주셨으면 합니다.",
+                                inline=True)
+                embed.add_field(name="안내사항",
+                                value="준홍봇의 개발자 준홍은 봇 도우미로 활동하고 있습니다. 도움이 필요하신분은 준홍!good good#8922로 DM  주시기바랍니다.",
+                                inline=True)
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
@@ -95,7 +96,8 @@ async def on_message(message):
                 if message.author.id in owner:
                     a = message.content[7:]
                     embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                    embed.add_field(name="준홍봇 정지기능", value=f"긴급한 일이 일어나 봇을 중지시킵니다.사유가 팀SB에게 전달되었습니다.\n\n 사유: {a} ", inline=True)
+                    embed.add_field(name="준홍봇 정지기능", value=f"긴급한 일이 일어나 봇을 중지시킵니다.사유가 팀SB에게 전달되었습니다.\n\n 사유: {a} ",
+                                    inline=True)
                     embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                     await channel.send(embed=embed)
                     await client.get_channel(int(Emergency)).send(f"긴급한 일이 일어나 봇을 중지시켰습니다. 사유 : {a}")
@@ -110,7 +112,7 @@ async def on_message(message):
                     await channel.send(embed=embed)
                     print(f'ping is {round(vld)}ms')
 
-                elif  vld >= 200 and vld <= 230:
+                elif vld >= 200 and vld <= 230:
                     embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
                     embed.add_field(name="준홍봇 핑 체크", value=f'준홍봇의 핑은\n{round(vld)}ms, 상태: 약간 느림 입니다!', inline=True)
                     embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
@@ -150,17 +152,27 @@ async def on_message(message):
                     embed.add_field(name="도움말 전송중........", value="도움말을 전송중입니다. 잠시만 기다려 주십시오.", inline=True)
                     embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                     await channel.send(embed=embed)
-                    time.sleep(3)
-                    embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title="준홍봇 도움말", description="모든 명령어 앞엔 `준홍아` 라는 접두사가 붙습니다.")
-                    embed.add_field(name="기본명령어1", value="안녕, 핑, 도움, 멜론차트, 내정보, 내프사, 실검, 섭정보(서버정보), 타자, 주사위, 규카트, 짜장면, 냉면, 타자", inline=True)
-                    embed.add_field(name="기본명령어2", value="개발코드, 닉네임, 탕수육, 감자칩, 뭐해, 캡챠, 현재시각, 업타임, 봇켜짐, 에교해봐", inline=True)
+                    await asyncio.sleep(3)
+                    embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title="준홍봇 도움말",
+                                          description="모든 명령어 앞엔 `준홍아` 라는 접두사가 붙습니다.")
+                    embed.add_field(name="기본명령어1",
+                                    value="안녕, 핑, 도움, 멜론차트, 내정보, 내프사, 실검, 섭정보(서버정보), 타자, 주사위, 규카트, 짜장면, 냉면, 타자",
+                                    inline=True)
+                    embed.add_field(name="기본명령어2", value="개발코드, 닉네임, 탕수육, 감자칩, 뭐해, 캡챠, 현재시각, 업타임, 봇켜짐, 에교해봐",
+                                    inline=True)
                     embed.add_field(name="서식필요명령어", value="say, esay, 갠챗, 찬반투표, 익명, 날씨, 건의, 정보, 계산, 단어학습", inline=True)
                     embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                     await message.author.send(embed=embed)
                     embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title="서식필요명령어 도움말")
-                    embed.add_field(name="간단한 서식 명령어1", value="say, esay 사용법 : 준홍아 say(esay) 할말, 찬반투표 사용법 : 준홍아 찬반투표 투표의 이름, 익명 사용법 : 준홍아 익명 할말", inline=False)
-                    embed.add_field(name="간단한 서식 명령어2", value="날씨 사용법 : 준홍아 날씨 지역명, 건의 사용법 : 준홍아 건의 건의 할 내용, 단어학습 사용법 : 준홍아 단어학습 입력할 단어 답으로 나올 단어", inline=False)
-                    embed.add_field(name="복잡한 서식 명령어2", value="갠챗 사용법 : 준홍아 갠챗 갠챗을 받을 유저 ID 할말, 정보 사용법 : 준홍아 정보 유저ID 또는 맨션(@mention)", inline=False)
+                    embed.add_field(name="간단한 서식 명령어1",
+                                    value="say, esay 사용법 : 준홍아 say(esay) 할말, 찬반투표 사용법 : 준홍아 찬반투표 투표의 이름, 익명 사용법 : 준홍아 익명 할말",
+                                    inline=False)
+                    embed.add_field(name="간단한 서식 명령어2",
+                                    value="날씨 사용법 : 준홍아 날씨 지역명, 건의 사용법 : 준홍아 건의 건의 할 내용, 단어학습 사용법 : 준홍아 단어학습 입력할 단어 답으로 나올 단어",
+                                    inline=False)
+                    embed.add_field(name="복잡한 서식 명령어2",
+                                    value="갠챗 사용법 : 준홍아 갠챗 갠챗을 받을 유저 ID 할말, 정보 사용법 : 준홍아 정보 유저ID 또는 맨션(@mention)",
+                                    inline=False)
                     embed.add_field(name="복잡한 서식 명령어2", value="계산 사용법 : 준홍아 계산 계산식", inline=False)
                     embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                     await message.author.send(embed=embed)
@@ -171,14 +183,14 @@ async def on_message(message):
                     await channel.send(embed=embed)
 
             elif message.content.startswith('준홍아 say'):
-                    try:
-                        sms = message.content[8:1023]
-                        await channel.send(sms)
-                    except:
-                        embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                        embed.add_field(name="준홍봇 채팅기능", value="사용방법: 준홍아 say 할말", inline=True)
-                        embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
-                        await channel.send(embed=embed)
+                try:
+                    sms = message.content[8:1023]
+                    await channel.send(sms)
+                except:
+                    embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
+                    embed.add_field(name="준홍봇 채팅기능", value="사용방법: 준홍아 say 할말", inline=True)
+                    embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
+                    await channel.send(embed=embed)
 
             elif message.content.startswith('준홍아 esay'):
                 try:
@@ -208,7 +220,8 @@ async def on_message(message):
                     await channel.send(embed=embed)
                 except:
                     embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                    embed.add_field(name="준홍봇 채팅기능", value="사용방법: 준홍아 갠챗 유저ID 할말 (문제가 없는데 이메세지가 출력된다면 권한문제일수 있습니다.)", inline=True)
+                    embed.add_field(name="준홍봇 채팅기능", value="사용방법: 준홍아 갠챗 유저ID 할말 (문제가 없는데 이메세지가 출력된다면 권한문제일수 있습니다.)",
+                                    inline=True)
                     embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                     await channel.send(embed=embed)
 
@@ -223,28 +236,27 @@ async def on_message(message):
                 await msg.add_reaction('👎')
 
             elif message.content == '준홍아 멜론차트':
-                    RANK = 10
-                    header = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'}
-                    req = requests.get('https://www.melon.com/chart/index.htm', headers=header)
-                    html = req.text
-                    parse = BeautifulSoup(html, 'html.parser')
-                    titles = parse.find_all("div", {"class": "ellipsis rank01"})
-                    songs = parse.find_all("div", {"class": "ellipsis rank02"})
-                    titles = get_text_from_url("ttps://www.melon.com/chart/index.htm")
-                    title = []
-                    song = []
-                    embed = discord.Embed(
-                        title="멜론차트 상위권(1~10위)\n차트 출처 : kakao(melon)\n",
-                        colour=0x85CFFF, timestamp=message.created_at
-                    )
-                    for t in titles:
-                        title.append(t.find('a').text)
-                    for s in songs:
-                        song.append(s.find('span', {"class": "checkEllipsis"}).text)
-                    for i in range(RANK):
-                        embed.add_field(name='%3d위' % (i + 1), value='%s - %s' % (title[i], song[i]), inline=False)
-                    embed.set_footer(text=f'{message.author}, 인증됨', icon_url=message.author.avatar_url)
-                    await channel.send(f'<@{message.author.id}>', embed=embed)
+                RANK = 10
+                header = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'}
+                req = requests.get('https://www.melon.com/chart/index.htm', headers=header)
+                html = req.text
+                parse = BeautifulSoup(html, 'html.parser')
+                songs = parse.find_all("div", {"class": "ellipsis rank02"})
+                titles = get_text_from_url("ttps://www.melon.com/chart/index.htm")
+                title = []
+                song = []
+                embed = discord.Embed(
+                    title="멜론차트 상위권(1~10위)\n차트 출처 : kakao(melon)\n",
+                    colour=0x85CFFF, timestamp=message.created_at
+                )
+                for t in titles:
+                    title.append(t.find('a').text)
+                for s in songs:
+                    song.append(s.find('span', {"class": "checkEllipsis"}).text)
+                for i in range(RANK):
+                    embed.add_field(name='%3d위' % (i + 1), value='%s - %s' % (title[i], song[i]), inline=False)
+                embed.set_footer(text=f'{message.author}, 인증됨', icon_url=message.author.avatar_url)
+                await channel.send(f'<@{message.author.id}>', embed=embed)
 
             elif message.content.startswith('준홍아 익명'):
                 try:
@@ -272,9 +284,9 @@ async def on_message(message):
             elif message.content.startswith('준홍아 내정보'):
                 date = datetime.datetime.utcfromtimestamp(((int(message.author.id) >> 22) + 1420070400000) / 1000)
                 status_dict: dict = {discord.Status.online: '<:status_online:754547779845750864> 온라인',
-                    discord.Status.offline: '<:status_offline:754547779606544394> 오프라인',
-                    discord.Status.idle: "<:status_idle:754547779174531114> 자리비움",
-                    discord.Status.do_not_disturb: "<:status_dnd:754547779048570970> 방해금지"}
+                                     discord.Status.offline: '<:status_offline:754547779606544394> 오프라인',
+                                     discord.Status.idle: "<:status_idle:754547779174531114> 자리비움",
+                                     discord.Status.do_not_disturb: "<:status_dnd:754547779048570970> 방해금지"}
                 user_status = status_dict[message.author.status]
                 roles = [role for role in message.author.roles]
                 embed = discord.Embed(colour=message.author.color, timestamp=message.created_at)
@@ -283,8 +295,10 @@ async def on_message(message):
                 embed.set_footer(text=f"{message.author},인증됨 ", icon_url=message.author.avatar_url)
                 embed.add_field(name="아이디", value=f"{message.author.id}", inline=False)
                 embed.add_field(name="닉네임", value=f"{message.author.display_name}", inline=False)
-                embed.add_field(name="가입일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일",inline=False)
-                embed.add_field(name=f"가진 역할들({len(roles) - 1}개)",value=f" ".join([role.mention for role in roles][1:]), inline=False)
+                embed.add_field(name="가입일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일",
+                                inline=False)
+                embed.add_field(name=f"가진 역할들({len(roles) - 1}개)",
+                                value=f" ".join([role.mention for role in roles][1:]), inline=False)
                 embed.add_field(name="가장 높은 역할", value=f"{message.author.top_role.mention}", inline=False)
                 embed.add_field(name="현재 유저 상태", value=f"{user_status}", inline=False)
                 embed.set_footer(text=f"{message.author}, 인증됨 ", icon_url=message.author.avatar_url)
@@ -310,12 +324,14 @@ async def on_message(message):
                 html = req.text
                 soup = BeautifulSoup(html, 'html.parser')
 
-                NowTemp = soup.find('span', {'class': 'todaytemp'}).text + soup.find('span',{'class': 'tempmark'}).text[2:]
+                NowTemp = soup.find('span', {'class': 'todaytemp'}).text + soup.find('span',
+                                                                                     {'class': 'tempmark'}).text[2:]
                 WeatherCast = soup.find('p', {'class': 'cast_txt'}).text
                 TodayMorningTemp = soup.find('span', {'class': 'min'}).text
                 TodayAfternoonTemp = soup.find('span', {'class': 'max'}).text
                 TodayFeelTemp = soup.find('span', {'class': 'sensible'}).text[5:]
-                TodayUV = soup.find('span', {'class': 'indicator'}).text[4:-2] + " " + soup.find('span', {'class': 'indicator'}).text[-2:]
+                TodayUV = soup.find('span', {'class': 'indicator'}).text[4:-2] + " " + soup.find('span', {
+                    'class': 'indicator'}).text[-2:]
                 CheckDust1 = soup.find('div', {'class': 'sub_info'})
                 CheckDust2 = CheckDust1.find('div', {'class': 'detail_box'})
                 for i in CheckDust2.select('dd'):
@@ -340,14 +356,17 @@ async def on_message(message):
             elif message.content == "준홍아 실검":
                 embed = discord.Embed(title=f"네이버 실시간 검색 정보", colour=0x85CFFF, timestamp=datetime.datetime.utcnow())
                 for r in requests.get('https://www.naver.com/srchrank?frm=main').json().get("data")[:10]:
-                    embed.add_field(name=f"**{r.get('rank')}위**",value=f"[{r.get('keyword')}](https://search.naver.com/search.naver?where=nexearch&query={r.get('keyword').replace(' ', '+')})",inline=False)
+                    embed.add_field(name=f"**{r.get('rank')}위**",
+                                    value=f"[{r.get('keyword')}](https://search.naver.com/search.naver?where=nexearch&query={r.get('keyword').replace(' ', '+')})",
+                                    inline=False)
                 embed.set_footer(text=f"{message.author}, 인증됨, 도움 : OWO#1996", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
             elif message.content == '준홍아 섭정보' or message.content == "준홍아 서버정보":
                 rnrrk = message.guild.region
                 print(message.guild.region)
-                embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at,title=f"서버 정보 - {message.guild.name}")
+                embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at,
+                                      title=f"서버 정보 - {message.guild.name}")
                 embed.set_thumbnail(url=message.guild.icon_url)
                 embed.add_field(name="서버 기본정보", value="서버의 기본 정보입니다.", inline=False)
                 embed.add_field(name="서버 이름", value=message.guild.name, inline=True)
@@ -355,19 +374,30 @@ async def on_message(message):
                 embed.add_field(name="서버 위치", value=rnrrk, inline=True)
                 embed.add_field(name="서버 주인", value=f'<@{message.guild.owner.id}>', inline=True)
                 embed.add_field(name="서버 주인 ID", value=message.guild.owner.id, inline=True)
-                embed.add_field(name="서버 채널 수",value=f'전체 채널: {len(message.guild.channels)}개 (채팅채널 : {len(message.guild.text_channels)}개 | 음성채널 : {len(message.guild.voice_channels)}개 | 카테고리 : {len(message.guild.categories)}개)',inline=True)
+                embed.add_field(name="서버 채널 수",
+                                value=f'전체 채널: {len(message.guild.channels)}개 (채팅채널 : {len(message.guild.text_channels)}개 | 음성채널 : {len(message.guild.voice_channels)}개 | 카테고리 : {len(message.guild.categories)}개)',
+                                inline=True)
                 embed.add_field(name="서버 유저정보", value="서버의 유저 정보입니다.", inline=False)
-                embed.add_field(name="서버 멤버 수",value=f'{len(message.guild.members)}명 (봇 : {len(list(filter(lambda x: x.bot, message.guild.members)))}명 | 유저 : {len(list(filter(lambda x: not x.bot, message.guild.members)))}명)',inline=True)
+                embed.add_field(name="서버 멤버 수",
+                                value=f'{len(message.guild.members)}명 (봇 : {len(list(filter(lambda x: x.bot, message.guild.members)))}명 | 유저 : {len(list(filter(lambda x: not x.bot, message.guild.members)))}명)',
+                                inline=True)
                 embed.add_field(name="서버 부스트정보", value="서버의 부스트 정보입니다.", inline=False)
-                embed.add_field(name="서버 부스트 레벨", value=f'<:boost:707784277307293747> {message.guild.premium_tier}레벨',inline=True)
-                embed.add_field(name="서버 부스트 횟수", value=f'<:boost:707784277307293747> {message.guild.premium_subscription_count}번', inline=True)
+                embed.add_field(name="서버 부스트 레벨", value=f'<:boost:707784277307293747> {message.guild.premium_tier}레벨',
+                                inline=True)
+                embed.add_field(name="서버 부스트 횟수",
+                                value=f'<:boost:707784277307293747> {message.guild.premium_subscription_count}번',
+                                inline=True)
                 embed.add_field(name="서버 잠수채널/시스템채널 정보", value="서버의 잠수채널/시스템채널 정보입니다.", inline=False)
                 if message.guild.afk_channel != None:
-                    embed.add_field(name=f'잠수 채널',value=f'<a:yes:707786803414958100> 잠수 채널이 있습니다.\n{message.guild.afk_channel.name} (타이머: {message.guild.afk_timeout})',inline=True)
+                    embed.add_field(name=f'잠수 채널',
+                                    value=f'<a:yes:707786803414958100> 잠수 채널이 있습니다.\n{message.guild.afk_channel.name} (타이머: {message.guild.afk_timeout})',
+                                    inline=True)
                 else:
                     embed.add_field(name="잠수 채널", value="<a:no:707786855143309370> 잠수 채널이 없습니다.")
                 if message.guild.system_channel != None:
-                    embed.add_field(name=f'시스템 채널',value=f'<a:yes:707786803414958100> 시스템 채널이 있습니다.\n<#{message.guild.system_channel.id}>',inline=True)
+                    embed.add_field(name=f'시스템 채널',
+                                    value=f'<a:yes:707786803414958100> 시스템 채널이 있습니다.\n<#{message.guild.system_channel.id}>',
+                                    inline=True)
                 else:
                     embed.add_field(name="잠수 채널", value="<a:no:707786855143309370> 시스템 채널이 없습니다.")
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
@@ -382,7 +412,8 @@ async def on_message(message):
                         await channel.send("건의가 완료되었습니다!")
                         await client.get_channel(int(gunlog)).send(f'<@447934468603379724>')
                         embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                        embed.add_field(name="준홍봇 건의", value=f'{message.author}({message.author.id})님의 건의 : {msg}',inline=True)
+                        embed.add_field(name="준홍봇 건의", value=f'{message.author}({message.author.id})님의 건의 : {msg}',
+                                        inline=True)
                         embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                         await client.get_channel(int(gunlog)).send(embed=embed)
                 except:
@@ -417,19 +448,22 @@ async def on_message(message):
 
             elif message.content == '준홍아 규카츠':
                 embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                embed.set_image(url="https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAxODA0MDlfOTgg%2FMDAxNTIzMjQ4NTQxOTgy.27rWawoPnQujw6HS4nPxcYjsbdZYnq-Ml3w0Q9DA3ggg.ECeoJu1W2ZiaWM8GvnPKGUylujeSjddKzkVMHZ1MuSYg.JPEG.creamy0080%2F12.%25B4%25EB%25C0%25FC%25C1%25DF%25BE%25D3%25BF%25AA%25B8%25C0%25C1%25FDDSC03358..jpg&type=b400")
+                embed.set_image(
+                    url="https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAxODA0MDlfOTgg%2FMDAxNTIzMjQ4NTQxOTgy.27rWawoPnQujw6HS4nPxcYjsbdZYnq-Ml3w0Q9DA3ggg.ECeoJu1W2ZiaWM8GvnPKGUylujeSjddKzkVMHZ1MuSYg.JPEG.creamy0080%2F12.%25B4%25EB%25C0%25FC%25C1%25DF%25BE%25D3%25BF%25AA%25B8%25C0%25C1%25FDDSC03358..jpg&type=b400")
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
             elif message.content == '준홍아 짜장면':
                 embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                embed.set_image(url="http://post.phinf.naver.net/MjAxNzEyMDVfMTgx/MDAxNTEyNDUzODM1Nzgz.oLCRrLmG048QINV4T7flJ1n5whWnMgXe2FPzjD8wvMog.1fVLRKcFZlnTg3DYFO8wrGnW9wZyZpx7Yd8hkGG3RTsg.JPEG/IIh6-J6mXMeGwnXBKX2yJP5ooR_0.jpg")
+                embed.set_image(
+                    url="http://post.phinf.naver.net/MjAxNzEyMDVfMTgx/MDAxNTEyNDUzODM1Nzgz.oLCRrLmG048QINV4T7flJ1n5whWnMgXe2FPzjD8wvMog.1fVLRKcFZlnTg3DYFO8wrGnW9wZyZpx7Yd8hkGG3RTsg.JPEG/IIh6-J6mXMeGwnXBKX2yJP5ooR_0.jpg")
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
             elif message.content == '준홍아 냉면':
                 embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                embed.set_image(url="http://post.phinf.naver.net/MjAxODA2MDdfMzUg/MDAxNTI4MzUyNjUzMDE1.ZA0IG7V1Ghd2c1FAp1JPvH__g8kKncVHOOYj8wkEFn4g.xGGLSjvb4a4Pqu35ghIEh7WhCwRzxm80BWxNo9q1U3Ig.JPEG/I-5vjeJnAa7azL8tI3ihsiYYU6oQ.jpg")
+                embed.set_image(
+                    url="http://post.phinf.naver.net/MjAxODA2MDdfMzUg/MDAxNTI4MzUyNjUzMDE1.ZA0IG7V1Ghd2c1FAp1JPvH__g8kKncVHOOYj8wkEFn4g.xGGLSjvb4a4Pqu35ghIEh7WhCwRzxm80BWxNo9q1U3Ig.JPEG/I-5vjeJnAa7azL8tI3ihsiYYU6oQ.jpg")
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
@@ -451,7 +485,9 @@ async def on_message(message):
                     varrr = message.content.split(' ')
                     await message.channel.purge(limit=int(varrr[2]) + 1)
                     msg = await message.channel.send(
-                        embed=discord.Embed(title=f'메시지 {str(int(varrr[2]))}개 삭제 완료!', descirption='응용 기능',timestamp=message.created_at, colour=discord.Colour.blue()).set_footer(icon_url=message.author.avatar_url, text=f'{str(message.author)}, 인증됨'))
+                        embed=discord.Embed(title=f'메시지 {str(int(varrr[2]))}개 삭제 완료!', descirption='응용 기능',
+                                            timestamp=message.created_at, colour=discord.Colour.blue()).set_footer(
+                            icon_url=message.author.avatar_url, text=f'{str(message.author)}, 인증됨'))
                     await asyncio.sleep(3)
                     await msg.delete()
                 else:
@@ -466,7 +502,8 @@ async def on_message(message):
                     except:
                         await message.channel.send("내용을 입력해주세요!")
                         return
-                    proc = await asyncio.create_subprocess_shell(a, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+                    proc = await asyncio.create_subprocess_shell(a, stdout=asyncio.subprocess.PIPE,
+                                                                 stderr=asyncio.subprocess.PIPE)
                     dd, _ = await proc.communicate()
                     embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
                     embed.add_field(name="cmd", value=f"{dd.decode('cp949')}", inline=True)
@@ -475,26 +512,29 @@ async def on_message(message):
 
 
             elif message.content.startswith('준홍아 정보'):
-                if str(message.content[7:]) == '': #애반데..뭐가 넘 비효율적으로 잡음.. 이 주석 뭔데 지워버릴까
+                if str(message.content[7:]) == '':  # 애반데..뭐가 넘 비효율적으로 잡음.. 이 주석 뭔데 지워버릴까
                     user = message.author
                     date = datetime.datetime.utcfromtimestamp(((int(user.id) >> 22) + 1420070400000) / 1000)
                     status_dict: dict = {discord.Status.online: '<:status_online:728527943827062804> 온라인',
-                        discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
-                        discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
-                        discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"} # 님 어떻게 됬음??/ 고쳣는데 왜 적용이 안됨..; 저장 Autosave no? 왔? 그게 뭐꼬
+                                         discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
+                                         discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
+                                         discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}  # 님 어떻게 됬음??/ 고쳣는데 왜 적용이 안됨..; 저장 Autosave no? 왔? 그게 뭐꼬
                     user_status = status_dict[user.status]
                     if not len(message.author.roles) == 1:
                         roles = [role for role in user.roles]
-                        embed=discord.Embed(colour=message.author.color, timestamp=message.created_at, title=f"유저정보 - {user}")
+                        embed = discord.Embed(colour=message.author.color, timestamp=message.created_at,
+                                              title=f"유저정보 - {user}")
                     else:
-                        embed=discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title=f"유저정보 - {user}")
+                        embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title=f"유저정보 - {user}")
                     embed.set_thumbnail(url=user.avatar_url)
                     embed.set_footer(text=f"{message.author}", icon_url=message.author.avatar_url)
                     embed.add_field(name="아이디", value=f"{user.id}", inline=False)
                     embed.add_field(name="닉네임", value=f"{user.display_name}", inline=False)
-                    embed.add_field(name="가입일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일", inline=False)
+                    embed.add_field(name="가입일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일",
+                                    inline=False)
                     try:
-                        embed.add_field(name=f"가진 역할들({len(roles)-1}개)", value=f" ".join([role.mention for role in roles][1:]), inline=False)
+                        embed.add_field(name=f"가진 역할들({len(roles) - 1}개)",
+                                        value=f" ".join([role.mention for role in roles][1:]), inline=False)
                         embed.add_field(name="가장 높은 역할", value=f"{user.top_role.mention}", inline=False)
                     except:
                         embed.add_field(name=f"가진 역할들", value=f"**소유한 역할이 없습니다!**", inline=False)
@@ -505,22 +545,26 @@ async def on_message(message):
                         if user.bot == False:
                             date = datetime.datetime.utcfromtimestamp(((int(user.id) >> 22) + 1420070400000) / 1000)
                             status_dict: dict = {discord.Status.online: '<:status_online:728527943827062804> 온라인',
-                                discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
-                                discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
-                                discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}
+                                                 discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
+                                                 discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
+                                                 discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}
                             user_status = status_dict[user.status]
                             if not len(user.roles) == 1:
                                 roles = [role for role in user.roles]
-                                embed=discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title=f"유저정보 - {user}")
+                                embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at,
+                                                      title=f"유저정보 - {user}")
                             else:
-                                embed=discord.Embed(colour=user.color, timestamp=message.created_at, title=f"유저정보 - {user}")
+                                embed = discord.Embed(colour=user.color, timestamp=message.created_at,
+                                                      title=f"유저정보 - {user}")
                             embed.set_thumbnail(url=user.avatar_url)
                             embed.set_footer(text=f"{message.author}", icon_url=message.author.avatar_url)
                             embed.add_field(name="아이디", value=f"{user.id}", inline=False)
                             embed.add_field(name="닉네임", value=f"{user.display_name}", inline=False)
-                            embed.add_field(name="가입일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일", inline=False)
+                            embed.add_field(name="가입일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일",
+                                            inline=False)
                             try:
-                                embed.add_field(name=f"가진 역할들({len(roles)-1}개)", value=f" ".join([role.mention for role in roles][1:]), inline=False)
+                                embed.add_field(name=f"가진 역할들({len(roles) - 1}개)",
+                                                value=f" ".join([role.mention for role in roles][1:]), inline=False)
                                 embed.add_field(name="가장 높은 역할", value=f"{user.top_role.mention}", inline=False)
                             except:
                                 embed.add_field(name=f"가진 역할들", value=f"**소유한 역할이 없습니다!**", inline=False)
@@ -529,54 +573,66 @@ async def on_message(message):
                         else:
                             date = datetime.datetime.utcfromtimestamp(((int(user.id) >> 22) + 1420070400000) / 1000)
                             status_dict: dict = {discord.Status.online: '<:status_online:728527943827062804> 온라인',
-                                discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
-                                discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
-                                discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}
+                                                 discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
+                                                 discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
+                                                 discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}
                             user_status = status_dict[user.status]
                             if not len(user.roles) == 1:
                                 roles = [role for role in user.roles]
-                                embed=discord.Embed(colour=message.author.color, timestamp=message.created_at, title=f"봇정보 - {user}")
+                                embed = discord.Embed(colour=message.author.color, timestamp=message.created_at,
+                                                      title=f"봇정보 - {user}")
                             else:
-                                embed=discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title=f"봇정보 - {user}")
+                                embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at,
+                                                      title=f"봇정보 - {user}")
                             embed.set_thumbnail(url=user.avatar_url)
                             embed.set_footer(text=f"{message.author}", icon_url=message.author.avatar_url)
                             embed.add_field(name="봇 아이디", value=f"{user.id}", inline=False)
                             embed.add_field(name="봇 닉네임", value=f"{user.display_name}", inline=False)
-                            embed.add_field(name="봇 생성일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일", inline=False)
+                            embed.add_field(name="봇 생성일",
+                                            value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일",
+                                            inline=False)
                             try:
-                                embed.add_field(name=f"가진 역할들({len(roles)-1}개)", value=f" ".join([role.mention for role in roles][1:]), inline=False)
+                                embed.add_field(name=f"가진 역할들({len(roles) - 1}개)",
+                                                value=f" ".join([role.mention for role in roles][1:]), inline=False)
                                 embed.add_field(name="가장 높은 역할", value=f"{user.top_role.mention}", inline=False)
                             except:
                                 embed.add_field(name=f"가진 역할들", value=f"**소유한 역할이 없습니다!**", inline=False)
                             embed.add_field(name="현재 봇 상태", value=f"{user_status}", inline=False)
-                            embed.add_field(name="봇 초대링크 (관리자 권한)", value=f"[초대하기](https://discordapp.com/oauth2/authorize?client_id={user.id}&scope=bot&permissions=8)", inline=False)
+                            embed.add_field(name="봇 초대링크 (관리자 권한)",
+                                            value=f"[초대하기](https://discordapp.com/oauth2/authorize?client_id={user.id}&scope=bot&permissions=8)",
+                                            inline=False)
                             await channel.send(embed=embed)
                     except:
                         try:
-                            user = message.guild.get_member(int(message.content.split()[2].replace('<@','').replace('>','').replace("!","")))
+                            user = message.guild.get_member(
+                                int(message.content.split()[2].replace('<@', '').replace('>', '').replace("!", "")))
                         except ValueError:
-                            embed = discord.Embed(title="경고",description="옳바른 값을 입력해주세요",colour=0x85CFFF)
+                            embed = discord.Embed(title="경고", description="옳바른 값을 입력해주세요", colour=0x85CFFF)
                             await channel.send(embed=embed)
                             return
                         if user.bot == False:
                             date = datetime.datetime.utcfromtimestamp(((int(user.id) >> 22) + 1420070400000) / 1000)
                             status_dict: dict = {discord.Status.online: '<:status_online:728527943827062804> 온라인',
-                                discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
-                                discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
-                                discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}
+                                                 discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
+                                                 discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
+                                                 discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}
                             user_status = status_dict[user.status]
                             if not len(user.roles) == 1:
                                 roles = [role for role in user.roles]
-                                embed=discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title=f"유저정보 - {user}")
+                                embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at,
+                                                      title=f"유저정보 - {user}")
                             else:
-                                embed=discord.Embed(colour=user.color, timestamp=message.created_at, title=f"유저정보 - {user}")
+                                embed = discord.Embed(colour=user.color, timestamp=message.created_at,
+                                                      title=f"유저정보 - {user}")
                             embed.set_thumbnail(url=user.avatar_url)
                             embed.set_footer(text=f"{message.author}", icon_url=message.author.avatar_url)
                             embed.add_field(name="아이디", value=f"{user.id}", inline=False)
                             embed.add_field(name="닉네임", value=f"{user.display_name}", inline=False)
-                            embed.add_field(name="가입일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일", inline=False)
+                            embed.add_field(name="가입일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일",
+                                            inline=False)
                             try:
-                                embed.add_field(name=f"가진 역할들({len(roles)-1}개)", value=f" ".join([role.mention for role in roles][1:]), inline=False)
+                                embed.add_field(name=f"가진 역할들({len(roles) - 1}개)",
+                                                value=f" ".join([role.mention for role in roles][1:]), inline=False)
                                 embed.add_field(name="가장 높은 역할", value=f"{user.top_role.mention}", inline=False)
                             except:
                                 embed.add_field(name=f"가진 역할들", value=f"**소유한 역할이 없습니다!**", inline=False)
@@ -585,38 +641,47 @@ async def on_message(message):
                         else:
                             date = datetime.datetime.utcfromtimestamp(((int(user.id) >> 22) + 1420070400000) / 1000)
                             status_dict: dict = {discord.Status.online: '<:status_online:728527943827062804> 온라인',
-                                discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
-                                discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
-                                discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}
+                                                 discord.Status.offline: '<:status_offline:728527943831126036> 오프라인',
+                                                 discord.Status.idle: "<:status_idle:728527943806091364> 자리비움",
+                                                 discord.Status.do_not_disturb: "<:status_dnd:728527943684456459> 방해금지"}
                             user_status = status_dict[user.status]
                             if not len(user.roles) == 1:
                                 roles = [role for role in user.roles]
-                                embed=discord.Embed(colour=message.author.color, timestamp=message.created_at, title=f"봇정보 - {user}")
+                                embed = discord.Embed(colour=message.author.color, timestamp=message.created_at,
+                                                      title=f"봇정보 - {user}")
                             else:
-                                embed=discord.Embed(colour=0x85CFFF, timestamp=message.created_at, title=f"봇정보 - {user}")
+                                embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at,
+                                                      title=f"봇정보 - {user}")
                             embed.set_thumbnail(url=user.avatar_url)
                             embed.set_footer(text=f"{message.author}", icon_url=message.author.avatar_url)
                             embed.add_field(name="봇 아이디", value=f"{user.id}", inline=False)
                             embed.add_field(name="봇 닉네임", value=f"{user.display_name}", inline=False)
-                            embed.add_field(name="봇 생성일", value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일", inline=False)
+                            embed.add_field(name="봇 생성일",
+                                            value=f"{str(date.year)}년 {str(date.month)}월 {str(date.day)}일",
+                                            inline=False)
                             try:
-                                embed.add_field(name=f"가진 역할들({len(roles)-1}개)", value=f" ".join([role.mention for role in roles][1:]), inline=False)
+                                embed.add_field(name=f"가진 역할들({len(roles) - 1}개)",
+                                                value=f" ".join([role.mention for role in roles][1:]), inline=False)
                                 embed.add_field(name="가장 높은 역할", value=f"{user.top_role.mention}", inline=False)
                             except:
                                 embed.add_field(name=f"가진 역할들", value=f"**소유한 역할이 없습니다!**", inline=False)
                             embed.add_field(name="현재 봇 상태", value=f"{user_status}", inline=False)
-                            embed.add_field(name="봇 초대링크 (관리자 권한)", value=f"[초대하기](https://discordapp.com/oauth2/authorize?client_id={user.id}&scope=bot&permissions=8)", inline=False)
+                            embed.add_field(name="봇 초대링크 (관리자 권한)",
+                                            value=f"[초대하기](https://discordapp.com/oauth2/authorize?client_id={user.id}&scope=bot&permissions=8)",
+                                            inline=False)
                             await channel.send(embed=embed)
 
             elif message.content == '준홍아 탕수육':
                 embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                embed.set_image(url="https://search.pstatic.net/common/?src=http%3A%2F%2Fcafefiles.naver.net%2F20130412_259%2Froyalrate7_1365760080337VvTgW_JPEG%2FDSCN7945.jpg&type=b400")
+                embed.set_image(
+                    url="https://search.pstatic.net/common/?src=http%3A%2F%2Fcafefiles.naver.net%2F20130412_259%2Froyalrate7_1365760080337VvTgW_JPEG%2FDSCN7945.jpg&type=b400")
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
             elif message.content == '준홍아 감자칩':
                 embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                embed.set_image(url="https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAxNzEyMTJfMjA4%2FMDAxNTEzMDc4MjgwMjE5.B5xVKAl3CNo8jaYf0trsO8Wr_8XfJJRjmwn8rO6VNM0g.I5dfl1H7vyDdeK0C0xAx7cNaRyIkEYvzed3gJRhxTGgg.JPEG.changuk1225%2F%25BD%25BA%25C6%25E4%25C0%25CE_%25C6%25E4%25C0%25CE%25C6%25AE%25C5%25EB_%25B0%25A8%25C0%25DA%25C4%25A8_%25BA%25B8%25B4%25D2%25B6%25F3%25B0%25A8%25C0%25DA%25C4%25A8_5.jpg&type=b400")
+                embed.set_image(
+                    url="https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAxNzEyMTJfMjA4%2FMDAxNTEzMDc4MjgwMjE5.B5xVKAl3CNo8jaYf0trsO8Wr_8XfJJRjmwn8rO6VNM0g.I5dfl1H7vyDdeK0C0xAx7cNaRyIkEYvzed3gJRhxTGgg.JPEG.changuk1225%2F%25BD%25BA%25C6%25E4%25C0%25CE_%25C6%25E4%25C0%25CE%25C6%25AE%25C5%25EB_%25B0%25A8%25C0%25DA%25C4%25A8_%25BA%25B8%25B4%25D2%25B6%25F3%25B0%25A8%25C0%25DA%25C4%25A8_5.jpg&type=b400")
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
@@ -649,7 +714,8 @@ async def on_message(message):
                     msg = message.content[7:]
                     embed = discord.Embed(
                         title=msg.split('and')[0],
-                        description=msg.split('and')[1] + '\n\n이 체널에 공지가 오는것이 싫다면 `봇-공지` 채널을 만들어주세요! \n\n[팀 SB 디스코드](http://discord.gg/UeWTsCg)\n[코어 엔터테인먼트](https://discord.gg/TeCpcBq)',
+                        description=msg.split('and')[
+                                        1] + '\n\n이 체널에 공지가 오는것이 싫다면 `봇-공지` 채널을 만들어주세요! \n\n[팀 SB 디스코드](http://discord.gg/UeWTsCg)\n[코어 엔터테인먼트](https://discord.gg/TeCpcBq)',
                         colour=discord.Colour.blue(),
                         timestamp=message.created_at
                     ).set_footer(icon_url=message.author.avatar_url, text=f'{message.author} - 인증됨').set_thumbnail(
@@ -796,7 +862,8 @@ async def on_message(message):
             elif message.content == '준홍아 현재시각':
                 now = time.localtime()
                 embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                embed.add_field(name="준홍봇 채팅기능", value="%02d시%02d분%02d초" % (now.tm_hour, now.tm_min, now.tm_sec),inline=True)
+                embed.add_field(name="준홍봇 채팅기능", value="%02d시%02d분%02d초" % (now.tm_hour, now.tm_min, now.tm_sec),
+                                inline=True)
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
@@ -806,7 +873,8 @@ async def on_message(message):
                 text = str(datetime.timedelta(seconds=difference))
                 embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
                 embed.add_field(name="업타임!", value=text, inline=True)
-                embed.set_thumbnail(url="https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAxNzAzMThfMjA2%2FMDAxNDg5ODAyMjg2NTQ1.vwHEuHuFRL0QeQGnxz9k6cVM7_Hm0kDNHGABDIyq1Wcg.oVIF0Bn7HEueDmc9sa_GT9zVMkMji5h0SNlUICcXNFgg.GIF.nico1691%2F1.gif&type=b400")
+                embed.set_thumbnail(
+                    url="https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAxNzAzMThfMjA2%2FMDAxNDg5ODAyMjg2NTQ1.vwHEuHuFRL0QeQGnxz9k6cVM7_Hm0kDNHGABDIyq1Wcg.oVIF0Bn7HEueDmc9sa_GT9zVMkMji5h0SNlUICcXNFgg.GIF.nico1691%2F1.gif&type=b400")
                 embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                 await channel.send(embed=embed)
 
@@ -826,7 +894,8 @@ async def on_message(message):
                     await message.channel.send('계산식이 올바르지 않습니다..')
                 else:
                     mathtext = ""
-                    allowed = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ".", "+", "-", "*", "**", "x", "X", "^", "/", "(", ")", "%"]
+                    allowed = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ".", "+", "-", "*", "**", "x", "X",
+                               "^", "/", "(", ")", "%"]
                     for i in math:
                         if i in allowed:
                             mathtext += i
@@ -871,20 +940,26 @@ async def on_message(message):
                     await channel.send(embed=embed)
                 if m == 2:
                     embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-                    embed.add_field(name=":no_entry_sign: 명령어 안내 :no_entry_sign:",value=f'{message.content} 이/라는 명령어는 없어', inline=True)
+                    embed.add_field(name=":no_entry_sign: 명령어 안내 :no_entry_sign:",
+                                    value=f'{message.content} 이/라는 명령어는 없어', inline=True)
                     embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
                     await channel.send(embed=embed)
 
     except Exception as ex:
         embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-        embed.add_field(name=":no_entry_sign: 오류!! ERROR!! :no_entry_sign:", value=f'에러 준홍봇에서 발생해요!\n에러에 대한 내용이 팀 SB에게 전송되었습니다!\n에러 내용 : {str(ex)} 사용방법이 궁금하시다면 `준홍아 도움`',inline=True)
+        embed.add_field(name=":no_entry_sign: 오류!! ERROR!! :no_entry_sign:",
+                        value=f'에러 준홍봇에서 발생해요!\n에러에 대한 내용이 팀 SB에게 전송되었습니다!\n에러 내용 : {str(ex)} 사용방법이 궁금하시다면 `준홍아 도움`',
+                        inline=True)
         embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
         await channel.send(embed=embed)
         embed = discord.Embed(colour=0x85CFFF, timestamp=message.created_at)
-        embed.add_field(name="에러발생!", value=f'guild : {message.channel.guild}({message.guild.id})\nch = {message.channel.name}({message.channel.id})\nauthor = {message.author}({message.author.id})\ncontent = {message.content}\nerror = {str(ex)}',inline=True)
+        embed.add_field(name="에러발생!",
+                        value=f'guild : {message.channel.guild}({message.guild.id})\nch = {message.channel.name}({message.channel.id})\nauthor = {message.author}({message.author.id})\ncontent = {message.content}\nerror = {str(ex)}',
+                        inline=True)
         embed.set_footer(text=f"{message.author}, 인증됨", icon_url=message.author.avatar_url)
         await client.get_channel(int(errorchannel)).send(embed=embed)
 
+
 access_token = "token"
-#access_token = os.environ["BOT_TOKEN"]
+# access_token = os.environ["BOT_TOKEN"]
 client.run(access_token)
